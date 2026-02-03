@@ -19,7 +19,10 @@ app = FastAPI(title="Inventory Forecasting System")
 # Enable CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+    "http://localhost:5173",
+    "https://stock-forcasting-with-react-fastapi.vercel.app"
+],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
