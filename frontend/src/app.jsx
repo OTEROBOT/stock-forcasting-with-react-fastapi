@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 import { Camera, Package, TrendingUp, AlertTriangle, Plus, Search, Upload, Download, Edit, Trash2, ArrowUpCircle, ArrowDownCircle, Activity, DollarSign, Boxes } from 'lucide-react';
 
-const API_URL = 'http://localhost:8000';
+const API_URL = 'https://inventory-forecast-backend-i42u.onrender.com';
 
 // Utility function for API calls
 const apiCall = async (endpoint, options = {}) => {
