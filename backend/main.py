@@ -203,7 +203,7 @@ async def startup():
         print("Generating mock data on startup...")
         from generate_mock_data import generate_sales_data  # ใช้ชื่อจริง
         conn = get_db()  # เปิด conn ใหม่เพราะตัวเก่าปิดแล้ว
-        product_ids = None  # หรือ list ID ถ้าฟังก์ชันต้องการ
+        product_ids = []  # list ว่าง เพื่อให้ loop ได้ (ไม่ error)
         generate_sales_data(conn, product_ids)  # ส่ง argument 2 ตัว
         conn.close()
 
