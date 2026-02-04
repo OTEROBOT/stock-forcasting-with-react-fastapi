@@ -201,8 +201,9 @@ async def startup():
     
     if count == 0:
         print("Generating mock data on startup...")
-        from generate_mock_data import generate_mock_data  # ใช้ฟังก์ชันหลักที่ insert products + sales
-        generate_mock_data()  # เรียกฟังก์ชันหลักที่ insert ทุกอย่าง (ไม่ต้องส่ง argument)
+        from generate_mock_data import generate_sales_data
+        generate_sales_data()
+
     
     conn.close()
 
