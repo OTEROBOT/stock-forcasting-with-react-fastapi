@@ -220,6 +220,17 @@ from generate_mock_data import get_all_product_ids, generate_sales_data
 
 app = FastAPI()
 
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # ใช้ * ไปก่อน ตอนส่งงาน
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
 DATABASE = "inventory.db"
 
 from generate_mock_data import (
