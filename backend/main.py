@@ -222,14 +222,23 @@ app = FastAPI()
 
 DATABASE = "inventory.db"
 
+from generate_mock_data import (
+    init_database,
+    get_all_product_ids,
+    insert_products,
+    generate_sales_data,
+    generate_recent_transactions
+)
+
 @app.on_event("startup")
 async def startup():
-    conn = sqlite3.connect(DATABASE)
+    # 1️⃣ สร้าง DB + TABLE ก่อนเสมอ
+    conn = init_database()
 
-    # 1️⃣ ดึง product_ids ก่อน
+    # 2️⃣ ค่อยดึง product_ids
     product_ids = get_all_product_ids(conn)
 
-    # 2️⃣ ถ้ายังไม่มีข้อมูล → generate mock
+    # 3️⃣ ถ้ายังว่าง → seed mock data
     if len(product_ids) == 0:
         print("Generating mock data...")
         product_ids = insert_products(conn)
@@ -237,6 +246,8 @@ async def startup():
         generate_recent_transactions(conn, product_ids)
 
     conn.close()
+    print("✅ Application startup complete")
+
 
 
 
