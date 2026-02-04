@@ -415,4 +415,4 @@ def main():
     conn.close()
 
 if __name__ == "__main__":
-    main()
+    generate_mock_data()  # หรือชื่อฟังก์ชันหลักในไฟล์ของคุณ
