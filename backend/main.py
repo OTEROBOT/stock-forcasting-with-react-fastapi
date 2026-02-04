@@ -206,27 +206,36 @@ def get_all_product_ids(conn):
 from fastapi import FastAPI
 from database import init_db, get_db
 from generate_mock_data import (
+    init_database,
     insert_products,
     generate_sales_data,
+    generate_recent_transactions,
     get_all_product_ids
 )
+import os
+import sqlite3
 
 app = FastAPI()
 
+DATABASE = "inventory.db"
+
 @app.on_event("startup")
-async def startup():
-    init_db()
-    conn = get_db()
+def startup_event():
+    db_exists = os.path.exists(DATABASE)
 
-    product_ids = get_all_product_ids(conn)
-
-    if not product_ids:
-        print("No products found, generating mock data...")
-        product_data = insert_products(conn)
-        generate_sales_data(conn, product_data)
+    if not db_exists:
+        print("🆕 Database not found, initializing...")
+        conn = init_database()
+        product_ids = insert_products(conn)
+        generate_sales_data(conn, product_ids, months=36)
+        generate_recent_transactions(conn, product_ids)
+        conn.close()
+        print("✅ Database initialized successfully")
     else:
-        print("Products already exist, skipping mock data")
+        print("📦 Database already exists")
 
+    conn = sqlite3.connect(DATABASE)
+    product_ids = get_all_product_ids(conn)
     conn.close()
 
 
