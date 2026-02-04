@@ -194,6 +194,15 @@ def calculate_rop(avg_daily_demand, lead_time_days, safety_stock):
 @app.on_event("startup")
 async def startup():
     init_db()
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) FROM products")
+    count = cursor.fetchone()[0]
+    conn.close()
+    if count == 0:
+        print("Generating mock data...")
+        from generate_mock_data import generate_mock_data
+        generate_mock_data()  # เรียกฟังก์ชันหลักจากไฟล์
 
 @app.get("/")
 async def root():
