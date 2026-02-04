@@ -191,21 +191,40 @@ def calculate_rop(avg_daily_demand, lead_time_days, safety_stock):
     return round(rop, 2)
 
 # API Endpoints
+# ==============================
+# FastAPI Startup Event
+# ==============================
 @app.on_event("startup")
 async def startup():
+    # 1. init database
     init_db()
+
+    # 2. get db connection
     conn = get_db()
     cursor = conn.cursor()
+
+    # 3. check product count
     cursor.execute("SELECT COUNT(*) FROM products")
     count = cursor.fetchone()[0]
-    
+
     if count == 0:
         print("Generating mock data on startup...")
-        from generate_mock_data import generate_sales_data
-        generate_sales_data()
 
-    
+        # import ครั้งเดียว
+        from generate_mock_data import generate_sales_data
+
+        # ดึง product_ids
+        product_ids = get_all_product_ids(conn)
+
+        # generate sales data (ส่ง argument ครบ)
+        generate_sales_data(conn, product_ids)
+
+    else:
+        print(f"Products already exist: {count} records")
+
+    # 4. close connection
     conn.close()
+
 
 @app.get("/")
 async def root():
