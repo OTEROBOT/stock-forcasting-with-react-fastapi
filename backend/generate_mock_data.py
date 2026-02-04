@@ -415,4 +415,4 @@ def main():
     conn.close()
 
 if __name__ == "__main__":
-    generate_mock_data()  # หรือชื่อฟังก์ชันหลักในไฟล์ของคุณ
+    generate_sales_data(conn=None, product_ids=None)  # ถ้าฟังก์ชันไม่ต้องการ argument
