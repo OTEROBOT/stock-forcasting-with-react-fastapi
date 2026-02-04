@@ -1,6 +1,6 @@
 # ===============================
 # Inventory Forecasting System
-# main.py (FULL VERSION)
+# main.py (FULL VERSION – FIXED)
 # ===============================
 
 from fastapi import FastAPI, HTTPException, UploadFile, File
@@ -14,8 +14,10 @@ from datetime import datetime, timedelta
 import io
 import itertools
 import warnings
+
 from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tsa.stattools import adfuller
+from scipy import stats
 
 warnings.filterwarnings("ignore")
 
@@ -41,6 +43,7 @@ def get_db():
     conn.row_factory = sqlite3.Row
     return conn
 
+
 def init_db():
     conn = get_db()
     cur = conn.cursor()
@@ -48,15 +51,16 @@ def init_db():
     cur.execute("""
     CREATE TABLE IF NOT EXISTS products (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        code TEXT UNIQUE,
-        name TEXT,
+        code TEXT UNIQUE NOT NULL,
+        name TEXT NOT NULL,
         category TEXT,
         unit TEXT,
         unit_cost REAL,
         ordering_cost REAL,
         holding_cost_percentage REAL,
         lead_time_days INTEGER,
-        current_stock INTEGER DEFAULT 0
+        current_stock INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     """)
 
@@ -65,7 +69,8 @@ def init_db():
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         product_id INTEGER,
         sale_date DATE,
-        quantity INTEGER
+        quantity INTEGER,
+        FOREIGN KEY (product_id) REFERENCES products(id)
     )
     """)
 
@@ -76,7 +81,8 @@ def init_db():
         transaction_type TEXT,
         quantity INTEGER,
         transaction_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        note TEXT
+        note TEXT,
+        FOREIGN KEY (product_id) REFERENCES products(id)
     )
     """)
 
@@ -90,27 +96,30 @@ class Product(BaseModel):
     code: str
     name: str
     category: Optional[str] = None
-    unit: str = "ชิ้น"
+    unit: str = "ขวด"
     unit_cost: float
     ordering_cost: float = 500
     holding_cost_percentage: float = 0.2
     lead_time_days: int = 7
     current_stock: int = 0
 
+
 class ProductUpdate(BaseModel):
-    name: Optional[str]
-    category: Optional[str]
-    unit: Optional[str]
-    unit_cost: Optional[float]
-    ordering_cost: Optional[float]
-    holding_cost_percentage: Optional[float]
-    lead_time_days: Optional[int]
+    name: Optional[str] = None
+    category: Optional[str] = None
+    unit: Optional[str] = None
+    unit_cost: Optional[float] = None
+    ordering_cost: Optional[float] = None
+    holding_cost_percentage: Optional[float] = None
+    lead_time_days: Optional[int] = None
+
 
 class Transaction(BaseModel):
     product_id: int
-    transaction_type: str
+    transaction_type: str  # in / out
     quantity: int
     note: Optional[str] = None
+
 
 class SalesData(BaseModel):
     product_id: int
@@ -118,36 +127,63 @@ class SalesData(BaseModel):
     quantity: int
 
 # ===============================
-# ARIMA
+# ARIMA + Inventory Logic
 # ===============================
-def find_best_arima(data):
+def find_best_arima_params(data, max_p=3, max_d=2, max_q=3):
     best_aic = np.inf
-    best_order = (1,1,1)
+    best_params = (1, 1, 1)
 
-    for p, d, q in itertools.product(range(3), range(2), range(3)):
+    try:
+        p_value = adfuller(data)[1]
+        d_range = range(0, 1) if p_value < 0.05 else range(1, max_d + 1)
+    except:
+        d_range = range(1, 2)
+
+    for p, d, q in itertools.product(range(max_p + 1), d_range, range(max_q + 1)):
+        if p == 0 and q == 0:
+            continue
         try:
-            model = ARIMA(data, order=(p,d,q))
+            model = ARIMA(data, order=(p, d, q))
             result = model.fit()
             if result.aic < best_aic:
                 best_aic = result.aic
-                best_order = (p,d,q)
+                best_params = (p, d, q)
         except:
             continue
-    return best_order
 
-def forecast_demand(sales, days=30):
-    df = pd.DataFrame(sales)
+    return best_params
+
+
+def forecast_demand(sales_data, periods=30):
+    df = pd.DataFrame(sales_data)
     df["sale_date"] = pd.to_datetime(df["sale_date"])
     df.set_index("sale_date", inplace=True)
 
-    daily = df.resample("D")["quantity"].sum().fillna(0)
+    daily_sales = df.resample("D")["quantity"].sum().fillna(0)
 
-    order = find_best_arima(daily.values)
-    model = ARIMA(daily, order=order)
+    order = find_best_arima_params(daily_sales.values)
+    model = ARIMA(daily_sales, order=order)
     fit = model.fit()
 
-    forecast = fit.forecast(days)
-    return forecast.tolist(), order
+    forecast = np.maximum(fit.forecast(periods), 0)
+    ci = fit.get_forecast(periods).conf_int()
+
+    return forecast.tolist(), ci.values.tolist(), order
+
+
+def calculate_eoq(annual_demand, ordering_cost, holding_cost):
+    if annual_demand <= 0 or holding_cost <= 0:
+        return 0
+    return round(np.sqrt((2 * annual_demand * ordering_cost) / holding_cost), 2)
+
+
+def calculate_safety_stock(demand_std, lead_time_days, service_level=0.95):
+    z = stats.norm.ppf(service_level)
+    return round(z * demand_std * np.sqrt(lead_time_days), 2)
+
+
+def calculate_rop(avg_daily_demand, lead_time_days, safety_stock):
+    return round(avg_daily_demand * lead_time_days + safety_stock, 2)
 
 # ===============================
 # Startup
@@ -162,15 +198,19 @@ def startup():
 # ===============================
 @app.get("/")
 def root():
-    return {"status": "Inventory Forecasting API working"}
+    return {"message": "Inventory Forecasting API working"}
 
-@app.post("/products")
-def add_product(p: Product):
+# ---------- Products ----------
+@app.post("/api/products")
+def create_product(p: Product):
     conn = get_db()
     cur = conn.cursor()
     try:
         cur.execute("""
-        INSERT INTO products VALUES (NULL,?,?,?,?,?,?,?,?,?)
+        INSERT INTO products
+        (code,name,category,unit,unit_cost,ordering_cost,
+         holding_cost_percentage,lead_time_days,current_stock)
+        VALUES (?,?,?,?,?,?,?,?,?)
         """, (
             p.code, p.name, p.category, p.unit,
             p.unit_cost, p.ordering_cost,
@@ -178,13 +218,13 @@ def add_product(p: Product):
             p.current_stock
         ))
         conn.commit()
-    except:
-        raise HTTPException(400, "Duplicate product code")
+    except sqlite3.IntegrityError:
+        raise HTTPException(400, "Product code already exists")
     finally:
         conn.close()
-    return {"message": "Product added"}
+    return {"message": "Product created"}
 
-@app.get("/products")
+@app.get("/api/products")
 def get_products():
     conn = get_db()
     cur = conn.cursor()
@@ -193,8 +233,9 @@ def get_products():
     conn.close()
     return data
 
-@app.post("/transactions")
-def add_transaction(t: Transaction):
+# ---------- Transactions ----------
+@app.post("/api/transactions")
+def create_transaction(t: Transaction):
     conn = get_db()
     cur = conn.cursor()
 
@@ -210,7 +251,7 @@ def add_transaction(t: Transaction):
         raise HTTPException(400, "Insufficient stock")
 
     cur.execute("""
-    INSERT INTO transactions (product_id, transaction_type, quantity, note)
+    INSERT INTO transactions (product_id,transaction_type,quantity,note)
     VALUES (?,?,?,?)
     """, (t.product_id, t.transaction_type, t.quantity, t.note))
 
@@ -221,44 +262,38 @@ def add_transaction(t: Transaction):
     conn.close()
     return {"new_stock": new_stock}
 
-@app.post("/sales/bulk")
-def bulk_sales(data: List[SalesData]):
-    conn = get_db()
-    cur = conn.cursor()
-    for s in data:
-        cur.execute("""
-        INSERT INTO sales_history (product_id, sale_date, quantity)
-        VALUES (?,?,?)
-        """, (s.product_id, s.sale_date, s.quantity))
-    conn.commit()
-    conn.close()
-    return {"inserted": len(data)}
-
-@app.get("/forecast/{product_id}")
+# ---------- Forecast ----------
+@app.get("/api/forecast/{product_id}")
 def forecast(product_id: int):
     conn = get_db()
     cur = conn.cursor()
 
+    cur.execute("SELECT * FROM products WHERE id=?", (product_id,))
+    product = cur.fetchone()
+    if not product:
+        raise HTTPException(404, "Product not found")
+
     cur.execute("""
-    SELECT sale_date, quantity FROM sales_history
-    WHERE product_id=?
+    SELECT sale_date,quantity FROM sales_history
+    WHERE product_id=? ORDER BY sale_date
     """, (product_id,))
     sales = [dict(r) for r in cur.fetchall()]
     conn.close()
 
     if len(sales) < 10:
-        raise HTTPException(400, "Not enough data")
+        raise HTTPException(400, "Insufficient sales data")
 
-    forecast, order = forecast_demand(sales)
+    forecast_values, ci, order = forecast_demand(sales)
 
     return {
         "arima": {"p": order[0], "d": order[1], "q": order[2]},
-        "forecast_30_days": forecast
+        "forecast": forecast_values,
+        "confidence_intervals": ci
     }
 
 # ===============================
-# Run
+# Run local
 # ===============================
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000)
