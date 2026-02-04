@@ -224,17 +224,20 @@ DATABASE = "inventory.db"
 
 @app.on_event("startup")
 async def startup():
-    init_db()  # ✅ สร้าง table ก่อนเสมอ
+    conn = sqlite3.connect(DATABASE)
 
-    conn = get_db()
-
+    # 1️⃣ ดึง product_ids ก่อน
     product_ids = get_all_product_ids(conn)
 
-if len(product_ids) == 0:
-    print("Generating mock data...")
-    generate_sales_data(conn, product_ids)
+    # 2️⃣ ถ้ายังไม่มีข้อมูล → generate mock
+    if len(product_ids) == 0:
+        print("Generating mock data...")
+        product_ids = insert_products(conn)
+        generate_sales_data(conn, product_ids)
+        generate_recent_transactions(conn, product_ids)
 
     conn.close()
+
 
 
 
