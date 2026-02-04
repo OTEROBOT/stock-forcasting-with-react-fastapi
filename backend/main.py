@@ -198,21 +198,20 @@ async def startup():
     cursor = conn.cursor()
     cursor.execute("SELECT COUNT(*) FROM products")
     count = cursor.fetchone()[0]
-    conn.close()
+    
     if count == 0:
         print("Generating mock data on startup...")
-        from generate_mock_data import generate_sales_data  # ใช้ชื่อจริง
-        conn = get_db()  # เปิด conn ใหม่เพราะตัวเก่าปิดแล้ว
-        product_ids = []  # list ว่าง เพื่อให้ loop ได้ (ไม่ error)
-        generate_sales_data(conn, product_ids)  # ส่ง argument 2 ตัว
-        conn.close()
+        from generate_mock_data import generate_mock_data  # ใช้ฟังก์ชันหลักที่ insert products + sales
+        generate_mock_data()  # เรียกฟังก์ชันหลักที่ insert ทุกอย่าง (ไม่ต้องส่ง argument)
+    
+    conn.close()
 
 @app.get("/")
 async def root():
-    return {"message": "Inventory Forecasting System API"}
+    return {"message": "Inventory Forecasting System API - Working!"}
 
 # Products endpoints
-@app.post("/api/products")
+@app.post("/products")
 async def create_product(product: Product):
     conn = get_db()
     cursor = conn.cursor()
@@ -234,7 +233,7 @@ async def create_product(product: Product):
     finally:
         conn.close()
 
-@app.get("/api/products")
+@app.get("/products")
 async def get_products(search: Optional[str] = None):
     conn = get_db()
     cursor = conn.cursor()
@@ -251,7 +250,7 @@ async def get_products(search: Optional[str] = None):
     conn.close()
     return products
 
-@app.get("/api/products/{product_id}")
+@app.get("/products/{product_id}")
 async def get_product(product_id: int):
     conn = get_db()
     cursor = conn.cursor()
@@ -263,7 +262,7 @@ async def get_product(product_id: int):
         raise HTTPException(status_code=404, detail="Product not found")
     return dict(product)
 
-@app.put("/api/products/{product_id}")
+@app.put("/products/{product_id}")
 async def update_product(product_id: int, product: ProductUpdate):
     conn = get_db()
     cursor = conn.cursor()
@@ -305,7 +304,7 @@ async def update_product(product_id: int, product: ProductUpdate):
     
     return {"message": "Product updated successfully"}
 
-@app.delete("/api/products/{product_id}")
+@app.delete("/products/{product_id}")
 async def delete_product(product_id: int):
     conn = get_db()
     cursor = conn.cursor()
@@ -320,7 +319,7 @@ async def delete_product(product_id: int):
     return {"message": "Product deleted successfully"}
 
 # Transactions endpoints
-@app.post("/api/transactions")
+@app.post("/transactions")
 async def create_transaction(transaction: Transaction):
     conn = get_db()
     cursor = conn.cursor()
@@ -364,7 +363,7 @@ async def create_transaction(transaction: Transaction):
     
     return {"message": "Transaction recorded successfully", "new_stock": new_stock}
 
-@app.get("/api/transactions")
+@app.get("/transactions")
 async def get_transactions(product_id: Optional[int] = None):
     conn = get_db()
     cursor = conn.cursor()
@@ -390,7 +389,7 @@ async def get_transactions(product_id: Optional[int] = None):
     return transactions
 
 # Sales endpoints
-@app.post("/api/sales/bulk")
+@app.post("/sales/bulk")
 async def create_bulk_sales(sales: List[SalesData]):
     conn = get_db()
     cursor = conn.cursor()
@@ -406,7 +405,7 @@ async def create_bulk_sales(sales: List[SalesData]):
     
     return {"message": f"{len(sales)} sales records created successfully"}
 
-@app.post("/api/sales/upload")
+@app.post("/sales/upload")
 async def upload_sales_csv(file: UploadFile = File(...)):
     """Upload sales data from CSV file
     Expected format: product_code, date, quantity
@@ -446,7 +445,7 @@ async def upload_sales_csv(file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@app.get("/api/sales/{product_id}")
+@app.get("/sales/{product_id}")
 async def get_sales_history(product_id: int):
     conn = get_db()
     cursor = conn.cursor()
@@ -461,7 +460,7 @@ async def get_sales_history(product_id: int):
     return sales
 
 # Forecasting endpoints
-@app.get("/api/forecast/{product_id}")
+@app.get("/forecast/{product_id}")
 async def get_forecast(product_id: int, periods: int = 30):
     conn = get_db()
     cursor = conn.cursor()
@@ -538,7 +537,7 @@ async def get_forecast(product_id: int, periods: int = 30):
     }
 
 # Dashboard endpoint
-@app.get("/api/dashboard")
+@app.get("/dashboard")
 async def get_dashboard():
     conn = get_db()
     cursor = conn.cursor()
