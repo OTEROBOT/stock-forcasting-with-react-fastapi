@@ -1,10 +1,8 @@
 # init_db.py
-import sqlite3
-
-DB_PATH = "inventory.db"
+from db import get_db
 
 def init_db():
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db()
     cursor = conn.cursor()
 
     cursor.execute("""

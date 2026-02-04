@@ -3,6 +3,12 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 import random
+from db import get_db
+
+def get_all_product_ids(conn):
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM products")
+    return [row[0] for row in cursor.fetchall()]
 
 # Initialize database
 DATABASE = "inventory.db"

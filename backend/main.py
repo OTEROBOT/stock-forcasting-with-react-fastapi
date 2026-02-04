@@ -214,6 +214,9 @@ from generate_mock_data import (
 )
 import os
 import sqlite3
+from init_db import init_db
+from db import get_db
+from generate_mock_data import get_all_product_ids, generate_sales_data
 
 app = FastAPI()
 
@@ -221,14 +224,9 @@ DATABASE = "inventory.db"
 
 @app.on_event("startup")
 async def startup():
-    init_db()  # ✅ สร้าง table ก่อน
+    init_db()  # ✅ สร้าง table ก่อนเสมอ
 
     conn = get_db()
-
-    from generate_mock_data import (
-        get_all_product_ids,
-        generate_sales_data
-    )
 
     product_ids = get_all_product_ids(conn)
 
