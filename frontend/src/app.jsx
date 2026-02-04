@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 import { Camera, Package, TrendingUp, AlertTriangle, Plus, Search, Upload, Download, Edit, Trash2, ArrowUpCircle, ArrowDownCircle, Activity, DollarSign, Boxes } from 'lucide-react';
 
-const API_URL = 'https://inventory-backend.up.railway.app';
+const API_URL = 'https://stock-forcasting-with-react-fastapi-production.up.railway.app';
 
 // Utility function for API calls
 const apiCall = async (endpoint, options = {}) => {
