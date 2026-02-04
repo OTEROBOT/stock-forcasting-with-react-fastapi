@@ -10,8 +10,8 @@ DATABASE = "inventory.db"
 def get_all_product_ids(conn):
     cursor = conn.cursor()
     cursor.execute("SELECT id FROM products")
-    rows = cursor.fetchall()
-    return [row[0] for row in rows]
+    return [row[0] for row in cursor.fetchall()]
+
 
 def init_database():
     conn = sqlite3.connect(DATABASE)
@@ -419,6 +419,10 @@ def main():
     print(f"  Transactions: {trans_count}")
     
     conn.close()
+    
+    
 
 if __name__ == "__main__":
     main()
+    
+    
