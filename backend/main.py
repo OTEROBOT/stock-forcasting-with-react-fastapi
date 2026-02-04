@@ -230,9 +230,9 @@ async def startup():
 
     product_ids = get_all_product_ids(conn)
 
-    if len(product_ids) == 0:
-        print("Generating mock data...")
-        generate_sales_data(conn)
+if len(product_ids) == 0:
+    print("Generating mock data...")
+    generate_sales_data(conn, product_ids)
 
     conn.close()
 
