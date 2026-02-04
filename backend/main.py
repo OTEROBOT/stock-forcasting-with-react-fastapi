@@ -202,8 +202,8 @@ async def startup():
     conn.close()
     if count == 0:
         print("Generating mock data on startup...")
-        from generate_mock_data import generate_mock_data  # ปรับชื่อไฟล์/ฟังก์ชันให้ตรง
-        generate_mock_data()
+        from generate_mock_data import generate_sales_data  # ใช้ชื่อฟังก์ชันจริงจากไฟล์
+        generate_sales_data()
 
 @app.get("/")
 async def root():
