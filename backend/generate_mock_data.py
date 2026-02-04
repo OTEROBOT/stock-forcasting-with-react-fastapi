@@ -4,11 +4,41 @@ import numpy as np
 from datetime import datetime, timedelta
 import random
 from db import get_db
+import random
+
+def insert_products(conn):
+    cursor = conn.cursor()
+    products = [
+        ("P001", "Coke"),
+        ("P002", "Pepsi"),
+        ("P003", "Water")
+    ]
+    cursor.executemany(
+        "INSERT INTO products (code, name) VALUES (?, ?)",
+        products
+    )
+    conn.commit()
+    return [1, 2, 3]
 
 def get_all_product_ids(conn):
     cursor = conn.cursor()
     cursor.execute("SELECT id FROM products")
     return [row[0] for row in cursor.fetchall()]
+
+def generate_sales_data(conn, product_ids):
+    cursor = conn.cursor()
+    today = datetime.now()
+
+    for pid in product_ids:
+        for i in range(30):
+            date = today - timedelta(days=i)
+            qty = random.randint(1, 10)
+            cursor.execute(
+                "INSERT INTO sales_history (product_id, sale_date, quantity) VALUES (?, ?, ?)",
+                (pid, date.strftime("%Y-%m-%d"), qty)
+            )
+
+    conn.commit()
 
 # Initialize database
 DATABASE = "inventory.db"
