@@ -244,11 +244,12 @@ from generate_mock_data import (
 )
 
 
-from generate_mock_data import generate_mock_data
+from generate_mock_data import generate_sales_data
 
 @app.on_event("startup")
 def startup_event():
-    generate_mock_data()
+    generate_sales_data()
+
 
 
 
