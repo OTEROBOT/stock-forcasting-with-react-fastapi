@@ -2,6 +2,8 @@ from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
+from database import init_db, get_db
+from generate_mock_data import generate_sales_data, get_all_product_ids
 import sqlite3
 import pandas as pd
 import numpy as np
@@ -201,35 +203,27 @@ def get_all_product_ids(conn):
 # ==============================
 # FastAPI Startup Event
 # ==============================
+from fastapi import FastAPI
+from database import init_db, get_db
+from generate_mock_data import generate_sales_data, get_all_product_ids
+
+app = FastAPI()
+
 @app.on_event("startup")
 async def startup():
-    # init database
     init_db()
-
     conn = get_db()
-    cursor = conn.cursor()
 
-    # check product count
-    cursor.execute("SELECT COUNT(*) FROM products")
-    count = cursor.fetchone()[0]
+    product_ids = get_all_product_ids(conn)
 
-    if count == 0:
-        print("Generating mock data on startup...")
-
-        from generate_mock_data import generate_sales_data
-
-        product_ids = get_all_product_ids(conn)
-
-        # กันกรณี table ว่างจริง ๆ
-        if not product_ids:
-            print("No products found, skipping sales generation")
-        else:
-            generate_sales_data(conn, product_ids)
-
+    if not product_ids:
+        print("No products found, generating mock data...")
+        generate_sales_data(conn, [])
     else:
-        print(f"Products already exist: {count}")
+        print("Products already exist, skipping mock data")
 
     conn.close()
+
 
 
 
