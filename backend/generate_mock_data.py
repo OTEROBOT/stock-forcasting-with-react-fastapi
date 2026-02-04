@@ -7,6 +7,12 @@ import random
 # Initialize database
 DATABASE = "inventory.db"
 
+def get_all_product_ids(conn):
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM products")
+    rows = cursor.fetchall()
+    return [row[0] for row in rows]
+
 def init_database():
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
@@ -415,4 +421,4 @@ def main():
     conn.close()
 
 if __name__ == "__main__":
-    generate_sales_data(conn=None, product_ids=None)  # ถ้าฟังก์ชันไม่ต้องการ argument
+    main()

@@ -205,7 +205,11 @@ def get_all_product_ids(conn):
 # ==============================
 from fastapi import FastAPI
 from database import init_db, get_db
-from generate_mock_data import generate_sales_data, get_all_product_ids
+from generate_mock_data import (
+    insert_products,
+    generate_sales_data,
+    get_all_product_ids
+)
 
 app = FastAPI()
 
@@ -218,7 +222,8 @@ async def startup():
 
     if not product_ids:
         print("No products found, generating mock data...")
-        generate_sales_data(conn, [])
+        product_data = insert_products(conn)
+        generate_sales_data(conn, product_data)
     else:
         print("Products already exist, skipping mock data")
 
