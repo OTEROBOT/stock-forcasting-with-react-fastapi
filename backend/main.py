@@ -199,6 +199,8 @@ def get_all_product_ids(conn):
     return [row[0] for row in rows]
 
 
+
+
 # API Endpoints
 # ==============================
 # FastAPI Startup Event
@@ -241,8 +243,18 @@ from generate_mock_data import (
     generate_recent_transactions
 )
 
+
+from generate_mock_data import generate_mock_data
+
+@app.on_event("startup")
+def startup_event():
+    generate_mock_data()
+
+
+
 @app.on_event("startup")
 async def startup():
+    
     # 1️⃣ สร้าง DB + TABLE ก่อนเสมอ
     conn = init_database()
 
