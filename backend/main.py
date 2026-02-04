@@ -249,6 +249,12 @@ from generate_mock_data import generate_sales_data
 @app.on_event("startup")
 def startup_event():
     generate_sales_data()
+    conn = get_db_connection()
+product_ids = get_all_product_ids(conn)
+
+if product_ids:
+    generate_sales_data(conn, product_ids)
+
 
 
 

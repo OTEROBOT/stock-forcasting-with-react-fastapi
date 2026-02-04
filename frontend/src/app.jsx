@@ -5,7 +5,9 @@ import {
 } from 'recharts';
 import { Camera, Package, TrendingUp, AlertTriangle, Plus, Search, Upload, Download, Edit, Trash2, ArrowUpCircle, ArrowDownCircle, Activity, DollarSign, Boxes } from 'lucide-react';
 
-const API_BASE = import.meta.env.VITE_API_URL;
+
+const API_URL = import.meta.env.VITE_API_URL;
+
 
 fetch(`${API_BASE}/products`)
 
